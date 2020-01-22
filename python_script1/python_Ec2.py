@@ -7,6 +7,6 @@ ec2_1=boto3.resource('ec2',region_name='us-east-1')
 inst=ec2_1.Instance(v)
 vol=inst.volumes.all()
 l=[v.id for v in vol]
-vol_snap=ec2.create_snapshot(Decription='Vol1',VolumeId=l[0])
+vol_snap=ec2.create_snapshot(Description='Vol1',VolumeId=l[0])
 print(vol_snap)
 trmt=ec2.terminate_instances(InstanceIds=[v])
