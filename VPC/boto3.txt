@@ -1,0 +1,33 @@
+import boto3
+
+
+ec2 = boto3.client('ec2', region_name='us-east-1')
+ec21=boto3.resource('ec2', region_name='us-east-1')
+
+vpc = ec21.create_vpc(CidrBlock='30.0.0.0/16')
+vpc.create_tags(Tags=[{"Key":"Name", "Value":"Do_not_Delete_VpcAD3"}])
+print(vpc.id)
+
+
+PubSub1AD = ec21.create_subnet(CidrBlock='30.0.1.0/24', VpcId=vpc.id)
+PubSub2AD = ec21.create_subnet(CidrBlock='30.0.2.0/24', VpcId=vpc.id)
+PriSub3AD = ec21.create_subnet(CidrBlock='30.0.3.0/24', VpcId=vpc.id)
+PriSub2AD = ec21.create_subnet(CidrBlock='30.0.4.0/24', VpcId=vpc.id)
+PubSub1AD.create_tags(Tags=[{"Key":"Name", "Value":"PubSub1AD"}])
+PubSub2AD.create_tags(Tags=[{"Key":"Name", "Value":"PubSub2AD"}])
+PriSub3AD.create_tags(Tags=[{"Key":"Name", "Value":"PriSub3AD"}])
+PriSub2AD.create_tags(Tags=[{"Key":"Name", "Value":"PriSub2AD"}])
+
+ig = ec21.create_internet_gateway()
+vpc.attach_internet_gateway(InternetGatewayId=ig.id)
+
+
+# create a route table and a public route
+rtable = vpc.create_route_table()
+route = rtable.create_route(DestinationCidrBlock='0.0.0.0/0',GatewayId=ig.id)
+
+
+#To make 2 public
+
+rtable.associate_with_subnet(SubnetId=PubSub1AD.id)
+rtable.associate_with_subnet(SubnetId=PubSub2AD.id)
