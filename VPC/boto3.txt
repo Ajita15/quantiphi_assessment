@@ -1,13 +1,13 @@
 import boto3
+ec2 = boto3.resource('ec2', region_name='us-east-1')
+ec2_client = boto3.client('ec2', region_name='us-east-1')
 
+# create VPC
+vpc = ec2.create_vpc(CidrBlock='30.0.0.0/16')
+vpc.create_tags(Tags=[{'Key':'Name', 'Value': 'Do_not_Delete_VpcAD3'}])
 
-ec2 = boto3.client('ec2', region_name='us-east-1')
-ec21=boto3.resource('ec2', region_name='us-east-1')
-
-vpc = ec21.create_vpc(CidrBlock='30.0.0.0/16')
-vpc.create_tags(Tags=[{"Key":"Name", "Value":"Do_not_Delete_VpcAD3"}])
-print(vpc.id)
-
+ec2_client.modify_vpc_attribute(VpcId=vpc.id, EnableDnsSupport={'Value': True})
+ec2_client.modify_vpc_attribute(VpcId=vpc.id, EnableDnsHostnames={'Value': True})
 
 PubSub1AD = ec21.create_subnet(CidrBlock='30.0.1.0/24', VpcId=vpc.id)
 PubSub2AD = ec21.create_subnet(CidrBlock='30.0.2.0/24', VpcId=vpc.id)
@@ -18,16 +18,115 @@ PubSub2AD.create_tags(Tags=[{"Key":"Name", "Value":"PubSub2AD"}])
 PriSub3AD.create_tags(Tags=[{"Key":"Name", "Value":"PriSub3AD"}])
 PriSub2AD.create_tags(Tags=[{"Key":"Name", "Value":"PriSub2AD"}])
 
-ig = ec21.create_internet_gateway()
-vpc.attach_internet_gateway(InternetGatewayId=ig.id)
+subnet_1_public.meta.client.modify_subnet_attribute(SubnetId=PubSub1AD.id, MapPublicIpOnLaunch={"Value": True})
+subnet_2_public.meta.client.modify_subnet_attribute(SubnetId=PubSub2AD.id, MapPublicIpOnLaunch={"Value": True})
 
 
-# create a route table and a public route
+# create igw for internet access and attach to vpc
+igw = ec2.create_internet_gateway()
+vpc.attach_internet_gateway(InternetGatewayId=igw.id)
+
+# create route table and add public route
 rtable = vpc.create_route_table()
-route = rtable.create_route(DestinationCidrBlock='0.0.0.0/0',GatewayId=ig.id)
+public_route = rtable.create_route(DestinationCidrBlock='0.0.0.0/0', GatewayId=igw.id)
 
-
-#To make 2 public
-
+# make subnet_1 and subnet_2 public and leave others private
 rtable.associate_with_subnet(SubnetId=PubSub1AD.id)
 rtable.associate_with_subnet(SubnetId=PubSub2AD.id)
+
+# Private route table for private subnets
+private_route_table = ec2.create_route_table(VpcId=vpc.id)
+private_route_table.associate_with_subnet(SubnetId=PriSub2AD.id)
+private_route_table.associate_with_subnet(SubnetId=PriSub3AD.id)
+
+# allocate elastic IP address
+allocation = ec2_client.allocate_address(
+Domain='vpc'
+)
+
+# create a NAT gateway
+nat_gw = ec2_client.create_nat_gateway(
+AllocationId=allocation['AllocationId'],
+SubnetId=PubSub1AD.id
+)
+nat_gw_id = nat_gw['NatGateway']['NatGatewayId']
+
+# attach the NAT gateway to private subnets
+ec2_client.create_route(RouteTableId=private_route_table.id,DestinationCidrBlock='0.0.0.0/0',NatGatewayId=nat_gw_id)
+
+# create a security group for bastion host
+bastion_sec_group = ec2.create_security_group(
+GroupName='ssh_bastion',
+Description='allow ssh to bastion',
+VpcId=vpc.id
+)
+bastion_sec_data_ingress = ec2_client.authorize_security_group_ingress(
+GroupId=bastion_sec_group.id,
+IpPermissions=[
+{
+'IpProtocol': 'tcp',
+'FromPort': 22,
+'ToPort': 22,
+'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+}
+]
+)
+bastion_sec_data_egress = ec2_client.authorize_security_group_ingress(
+GroupId=bastion_sgsri.id,
+IpPermissions=[
+{
+'IpProtocol': 'tcp',
+'FromPort': 22,
+'ToPort': 22,
+'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+}
+]
+)
+
+# create a security group for the instances in private subnet
+sec_group = ec2.create_security_group(
+GroupName='ssh_http_sg',
+Description='allow ssh http access',
+VpcId=vpc.id
+)
+sec_data = ec2_client.authorize_security_group_ingress(
+GroupId=sec_group.id,
+IpPermissions=[
+{
+'IpProtocol': 'tcp',
+'FromPort': 22,
+'ToPort': 22,
+'IpRanges': [{'CidrIp': bastion_sec_group.id}]
+},
+{
+'CidrIp':'10.10.1.0/24',
+'IpProtocol':'-1',
+'FromPort':'-1',
+'ToPort':'-1',
+}
+]
+)
+
+# create bastion host
+bastion_host = ec2.create_instances(
+ImageId='ami-062f7200baf2fa504',
+MinCount=1,
+MaxCount=1,
+InstanceType='t2.micro',
+SubnetId=subnet_1['Subnet']['SubnetId'],
+SecurityGroups=[
+bastion_sec_group.id,
+],
+KeyName='test-keyfile'
+)
+private_host = ec2.create_instances(
+ImageId='ami-062f7200baf2fa504',
+MinCount=1,
+MaxCount=1,
+InstanceType='t2.micro',
+SubnetId=subnet_3['Subnet']['SubnetId'],
+SecurityGroups=[
+sec_group.id,
+],
+KeyName='private_ssh'
+)
