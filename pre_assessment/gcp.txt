@@ -1,0 +1,63 @@
+GCP Section
+Q1. Steps to create VPC and subnets
+Ans.
+1.For, creating VPC and subnet in GCP.
+2.Go to the VPC networks page in the Google Cloud Console.
+3.Click on Create VPC network.
+4.Give a Name for the network.
+5.Choose Custom for the Subnet creation mode.
+6.In the New subnet section, specify the following configuration parameters for a subnet:
+a)Provide a Name for the subnet.
+b)Select a Region.
+c)Enter an IP address range. (For E.g. (10.1.2.0/24))
+d)To define a secondary range for the subnet, click Create secondary IP range.
+e)Private Google access: Choose whether to enable Private Google Access for the subnet when you create it or later by editing it.
+f)Flow logs: Choose whether to enable VPC flow logs for the subnet when you create it or later by editing it.
+g)Click Done.
+7.To add more subnets, click Add subnet and repeat the previous steps.
+8.Choose the Dynamic routing mode for the VPC network.
+9.Click Create.
+
+
+Q2. Steps to create a service account and add IAM roles which grants access to GCE and GCS only.
+Ans.
+1. To create a service account the user must be granted a service account admin role or the editor primitive role
+2. Open service accounts page in console
+3. Click select a project and chose your project
+4. Click create service account 
+5. Enter name, description, role and save
+6. Go to roles page 
+7. Select organization
+8. Create role
+9. Enter name, title, description
+10. Click add permissions
+11. Select the GCE and GCS Services and save
+12. Open IAM & Admin page
+13. Select project and chose the project and click open
+14. Identify the service account to add roles and click edit 
+15. Select the roles.
+
+Q3. Steps to create bucket and transfer files from local to GCS using gsutil
+Ans:
+1.To create a bucket.
+2.Open Cloud Storage.
+3.Click on Create Bucket.
+4.Enter the bucket information like name, choose standard for storage class and location.
+5.Choose set object level and bucket level permissions.
+6.Click on create.
+7.To copy all my local files to the buckets (GCS).
+gsutil cp -r dir gs://my-bucket
+
+Q4. Steps to create GCE VM and deploy nginx.
+Ans: 
+NGINX is open source software for web serving, reverse proxying, caching, load balancing, media streaming, and more.
+Steps are as follows:
+1. Go to the VM instances page.
+2. Click Create instance.
+3. Specify a Name for your instance.
+4. In the Container section, select the Deploy a container image to this VM instance checkbox.
+5. Specify the Container image to use.
+	a)For example, you can specify gcr.io/cloud-marketplace/google/nginx1:1.12 to select an NGINX 1.12 container image from Cloud Launcher.
+	b)If you use a container image from Docker Hub, always specify the full Docker image name. For example, specify the following image name to deploy an Apache container image: docker.io/httpd:2.4.
+6. Optionally, click advanced container options. For more information, see Configuring options to run your container.
+7. Click Create to create the instance, boot the instance, and launch the container.
