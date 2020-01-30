@@ -1,4 +1,3 @@
-# app.py - a minimal flask api using flask_restful
 from flask import Flask
 
 @app.route("/")
